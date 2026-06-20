@@ -13,6 +13,10 @@
 #include <memory>
 #include <string>
 
+NV_NS_INFRA_CLI_BEGIN
+class CliServer;
+NV_NS_INFRA_CLI_END
+
 NV_NS_CORE_BEGIN
 
 class Application {
@@ -41,6 +45,7 @@ private:
     boost::asio::steady_timer watchdog_timer_;
     std::unique_ptr<platform::Watchdog> watchdog_;
     std::unique_ptr<service::GatewayService> gateway_service_;
+    std::unique_ptr<NV_NS_INFRA_CLI::CliServer> cli_server_;
     std::atomic<bool> running_{true};
     int exit_code_{0};
 };

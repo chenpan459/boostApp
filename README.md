@@ -31,6 +31,9 @@ Gateway
   └─ thread_pool (worker 线程池, 并发执行业务 Handler)
          │
          └─ FileEventStore (可选持久化)
+
+CliServer (Unix socket, 可选)
+  └─ nvcomm-cli 动态调试：status / stats / routes / log level ...
 ```
 
 | 层级 | 组件 | 职责 |
@@ -77,8 +80,11 @@ boostApp/
 ├── lib/boost/
 │
 └── src/
-    ├── app/nvcommd/main.cpp
-    ├── core/                     # Application、Config、Logger
+    ├── app/
+    │   ├── nvcommd/main.cpp
+    │   └── nvcomm_cli/main.cpp   # 调试 CLI 客户端
+    ├── core/                     # Application、Config、Logger、DebugStats
+    ├── infra/cli/                # CliServer、CliDispatcher
     ├── platform/                 # RK3588：绑核、看门狗、systemd
     ├── domain/
     │   ├── gateway/                # GatewayRequest/Response/Context
@@ -149,6 +155,37 @@ curl http://127.0.0.1:8080/health
 curl -X POST http://127.0.0.1:8080/api/v1/packet -d 'hello'
 ```
 
+### 动态调试 CLI
+
+服务启动后，可通过 Unix socket 连接调试 CLI（无需重启进程即可查看状态、调整日志级别）：
+
+```bash
+# 单次命令
+./build/nvcomm-cli ping
+./build/nvcomm-cli stats
+./build/nvcomm-cli routes
+./build/nvcomm-cli "log level debug"
+
+# 交互模式
+./build/nvcomm-cli
+nvcomm> help
+nvcomm> status
+nvcomm> log level info
+nvcomm> exit
+```
+
+| 命令 | 说明 |
+|------|------|
+| `help` | 命令列表 |
+| `status` | 进程状态、uptime、监听地址 |
+| `stats` | HTTP 请求计数（总量、成功、限流、鉴权失败等） |
+| `config` | 当前生效配置摘要 |
+| `routes` | 已注册网关路由 |
+| `log level [name]` | 查看或动态设置日志级别 |
+| `ping` | 连通性检查 |
+
+默认 socket 路径：`run/nvcomm.cli.sock`，可用 `-s PATH` 覆盖。
+
 ### nginx 集成
 
 ```bash
@@ -183,6 +220,10 @@ cpu_affinity = -1
 event_dir = data/events
 persist = true
 event_max_size_mb = 50      # 事件文件轮转大小
+
+[debug]
+cli_enabled = true          # 启用 Unix socket 调试 CLI
+cli_socket = run/nvcomm.cli.sock
 ```
 
 ## RK3588 板端部署

@@ -1,6 +1,7 @@
 #include "core/application.hpp"
 
 #include "core/logger.hpp"
+#include "infra/cli/cli_server.hpp"
 #include "platform/cpu_affinity.hpp"
 #include "platform/paths.hpp"
 #include "platform/systemd_notify.hpp"
@@ -32,6 +33,10 @@ Application::~Application() {
         gateway_service_->stop();
         gateway_service_.reset();
     }
+    if (cli_server_) {
+        cli_server_->stop();
+        cli_server_.reset();
+    }
     if (enable_platform_) {
         platform::notify_stopping();
         watchdog_.reset();
@@ -48,7 +53,8 @@ void Application::parse_args(int argc, char** argv) {
             std::ostringstream help;
             help << "Usage: " << app_name_ << " [options]\n"
                  << "  -c, --config PATH   config file (default: " << config_path_ << ")\n"
-                 << "  -h, --help          show help\n";
+                 << "  -h, --help          show help\n"
+                 << "\nDebug CLI: nvcomm-cli -s run/nvcomm.cli.sock\n";
             std::cout << help.str();
             std::exit(0);
         }
@@ -73,6 +79,9 @@ void Application::setup_signals() {
         running_.store(false);
         if (gateway_service_) {
             gateway_service_->stop();
+        }
+        if (cli_server_) {
+            cli_server_->stop();
         }
         io_context_.stop();
     });
@@ -116,8 +125,18 @@ int Application::run_network() {
     gateway_service_ = std::make_unique<service::GatewayService>(config_, running_);
     gateway_service_->start();
 
+    if (config_.cli_enabled && !config_.cli_socket.empty()) {
+        cli_server_ = std::make_unique<NV_NS_INFRA_CLI::CliServer>(
+            io_context_, gateway_service_->cli_context(config_path_));
+        cli_server_->start();
+    }
+
     io_context_.run();
     running_.store(false);
+    if (cli_server_) {
+        cli_server_->stop();
+        cli_server_.reset();
+    }
     gateway_service_->stop();
     gateway_service_.reset();
 

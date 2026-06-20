@@ -64,4 +64,8 @@ void Gateway::handle_async(domain::GatewayRequest request,
     });
 }
 
+std::vector<std::string> Gateway::describe_routes() const {
+    return router_.describe();
+}
+
 NV_NS_SERVICE_END

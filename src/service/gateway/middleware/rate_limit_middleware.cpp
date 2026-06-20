@@ -4,8 +4,8 @@
 
 NV_NS_SERVICE_BEGIN
 
-RateLimitMiddleware::RateLimitMiddleware(std::uint32_t requests_per_second)
-    : requests_per_second_(requests_per_second) {}
+RateLimitMiddleware::RateLimitMiddleware(std::uint32_t requests_per_second, core::DebugStats* stats)
+    : requests_per_second_(requests_per_second), stats_(stats) {}
 
 void RateLimitMiddleware::process(domain::GatewayContext& ctx, domain::NextMiddleware next) {
     if (requests_per_second_ == 0 || ctx.request().path == "/health") {
@@ -26,6 +26,9 @@ void RateLimitMiddleware::process(domain::GatewayContext& ctx, domain::NextMiddl
         }
         ++entry.second;
         if (entry.second > requests_per_second_) {
+            if (stats_) {
+                ++stats_->rate_limited;
+            }
             ctx.abort({429, "application/json", R"({"error":"rate limit exceeded"})"});
             return;
         }

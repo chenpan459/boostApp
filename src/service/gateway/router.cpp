@@ -1,5 +1,7 @@
 #include "service/gateway/router.hpp"
 
+#include <sstream>
+
 NV_NS_SERVICE_BEGIN
 
 void Router::add(Route route) {
@@ -24,6 +26,24 @@ const Route* Router::match(const domain::GatewayRequest& request) const {
         }
     }
     return nullptr;
+}
+
+std::vector<std::string> Router::describe() const {
+    std::vector<std::string> lines;
+    lines.reserve(routes_.size());
+
+    for (const auto& route : routes_) {
+        std::ostringstream oss;
+        oss << (route.method.empty() ? "*" : route.method) << ' '
+            << (route.prefix ? (route.path + "*") : route.path) << " async="
+            << (route.async ? "true" : "false");
+        lines.push_back(oss.str());
+    }
+
+    if (lines.empty()) {
+        lines.push_back("(no routes)");
+    }
+    return lines;
 }
 
 NV_NS_SERVICE_END

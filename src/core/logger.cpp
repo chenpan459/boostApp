@@ -141,4 +141,28 @@ void log_write(LogLevel level, const std::string& message) {
     }
 }
 
+void set_log_level(const std::string& level_name) {
+    std::lock_guard lock(g_log_mutex);
+    g_min_level = parse_log_level(level_name);
+}
+
+std::string current_log_level_name() {
+    std::lock_guard lock(g_log_mutex);
+    switch (g_min_level) {
+        case LogLevel::Trace:
+            return "trace";
+        case LogLevel::Debug:
+            return "debug";
+        case LogLevel::Info:
+            return "info";
+        case LogLevel::Warning:
+            return "warn";
+        case LogLevel::Error:
+            return "error";
+        case LogLevel::Fatal:
+            return "fatal";
+    }
+    return "info";
+}
+
 NV_NS_CORE_END

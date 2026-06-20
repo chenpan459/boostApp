@@ -1,23 +1,22 @@
 #pragma once
 
+#include "core/debug_stats.hpp"
 #include "domain/ports/middleware.hpp"
 #include "namespace.hpp"
 
-#include <cstdint>
-#include <mutex>
 #include <string>
-#include <unordered_map>
 
 NV_NS_SERVICE_BEGIN
 
 class AuthMiddleware : public domain::IMiddleware {
 public:
-    explicit AuthMiddleware(std::string api_key);
+    AuthMiddleware(std::string api_key, core::DebugStats* stats = nullptr);
 
     void process(domain::GatewayContext& ctx, domain::NextMiddleware next) override;
 
 private:
     std::string api_key_;
+    core::DebugStats* stats_{nullptr};
 };
 
 NV_NS_SERVICE_END

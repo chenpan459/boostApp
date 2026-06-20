@@ -21,6 +21,7 @@ class Router {
 public:
     void add(Route route);
     const Route* match(const domain::GatewayRequest& request) const;
+    std::vector<std::string> describe() const;
 
 private:
     std::vector<Route> routes_;

@@ -19,6 +19,8 @@ void shutdown_logging();
 void log_write(LogLevel level, const std::string& message);
 
 LogLevel parse_log_level(const std::string& level_name);
+void set_log_level(const std::string& level_name);
+std::string current_log_level_name();
 
 #define BOOSTAPP_LOG(level, msg) \
     NV_NS_CORE::log_write(NV_NS_CORE::LogLevel::level, (msg))

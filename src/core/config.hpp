@@ -22,6 +22,9 @@ struct AppConfig {
     std::string gateway_api_key;
     std::uint32_t gateway_rate_limit_rps{0};
 
+    bool cli_enabled{true};
+    std::string cli_socket{"run/nvcomm.cli.sock"};
+
     int watchdog_sec{0};
     int cpu_affinity{-1};
 

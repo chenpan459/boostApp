@@ -26,6 +26,8 @@ public:
     void handle_async(domain::GatewayRequest request,
                       std::function<void(domain::GatewayResponse)> on_complete);
 
+    std::vector<std::string> describe_routes() const;
+
 private:
     void run_pipeline(std::shared_ptr<domain::GatewayContext> ctx,
                       std::size_t index,

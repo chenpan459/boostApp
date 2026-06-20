@@ -230,6 +230,7 @@ do_build() {
     compile
     log "done:"
     log "  ${BUILD_DIR}/nvcommd"
+    log "  ${BUILD_DIR}/nvcomm-cli"
 }
 
 do_rebuild() {
@@ -258,6 +259,10 @@ do_run() {
         -H "Content-Type: application/octet-stream" \
         --data "sensor/temp=25.3"
     echo
+
+    log "smoke test: nvcomm-cli debug socket"
+    "${BUILD_DIR}/nvcomm-cli" -s "${ROOT_DIR}/run/nvcomm.cli.sock" ping | grep -q '^pong$'
+    "${BUILD_DIR}/nvcomm-cli" -s "${ROOT_DIR}/run/nvcomm.cli.sock" stats | grep -q '^total_requests='
 
     kill "${daemon_pid}" 2>/dev/null || true
     wait "${daemon_pid}" 2>/dev/null || true

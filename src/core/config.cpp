@@ -157,6 +157,9 @@ AppConfig load_config(const std::string& path) {
     cfg.gateway_api_key = get_value(values, "gateway", "api_key", cfg.gateway_api_key);
     cfg.gateway_rate_limit_rps = get_value(values, "gateway", "rate_limit_rps", cfg.gateway_rate_limit_rps);
 
+    cfg.cli_enabled = get_value(values, "debug", "cli_enabled", cfg.cli_enabled);
+    cfg.cli_socket = get_value(values, "debug", "cli_socket", cfg.cli_socket);
+
     cfg.watchdog_sec = get_value(values, "runtime", "watchdog_sec", cfg.watchdog_sec);
     cfg.cpu_affinity = get_value(values, "runtime", "cpu_affinity", cfg.cpu_affinity);
 

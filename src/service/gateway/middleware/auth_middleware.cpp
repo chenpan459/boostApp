@@ -4,7 +4,8 @@
 
 NV_NS_SERVICE_BEGIN
 
-AuthMiddleware::AuthMiddleware(std::string api_key) : api_key_(std::move(api_key)) {}
+AuthMiddleware::AuthMiddleware(std::string api_key, core::DebugStats* stats)
+    : api_key_(std::move(api_key)), stats_(stats) {}
 
 void AuthMiddleware::process(domain::GatewayContext& ctx, domain::NextMiddleware next) {
     if (api_key_.empty() || ctx.request().path == "/health") {
@@ -24,6 +25,9 @@ void AuthMiddleware::process(domain::GatewayContext& ctx, domain::NextMiddleware
     }
 
     if (provided != api_key_) {
+        if (stats_) {
+            ++stats_->unauthorized;
+        }
         ctx.abort({401, "application/json", R"({"error":"unauthorized"})"});
         return;
     }
