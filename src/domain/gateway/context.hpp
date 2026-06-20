@@ -24,6 +24,10 @@ public:
         aborted_ = true;
     }
 
+    void set_request_id(std::string request_id) {
+        request_.request_id = std::move(request_id);
+    }
+
 private:
     GatewayRequest request_;
     GatewayResponse response_;

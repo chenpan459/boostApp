@@ -12,7 +12,11 @@ void AccessLogMiddleware::process(domain::GatewayContext& ctx, domain::NextMiddl
     const auto& req = ctx.request();
     const auto& res = ctx.response();
     std::ostringstream line;
-    line << req.method << ' ' << req.path << ' ' << res.status << ' ' << req.client;
+    line << req.request_id << ' ' << req.method << ' ' << req.path;
+    if (!req.query.empty()) {
+        line << '?' << req.query;
+    }
+    line << ' ' << res.status << ' ' << req.client;
     BOOSTAPP_LOG(Info, "gateway " + line.str());
 }
 

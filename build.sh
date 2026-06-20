@@ -36,6 +36,7 @@ Commands:
   clean-all     Remove build directory and lib/
   install       Build and install boostApp to prefix
   run           Build and run a quick HTTP smoke test
+  test          Build and run unit tests (ctest)
 
 Options:
   -t, --type TYPE     Build type: Release or Debug (default: Release)
@@ -266,7 +267,7 @@ do_run() {
 COMMAND="build"
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        build|rebuild|boost|clean|clean-boost|clean-lib|clean-all|install|run)
+        build|rebuild|boost|clean|clean-boost|clean-lib|clean-all|install|run|test)
             COMMAND="$1"
             shift
             ;;
@@ -306,5 +307,6 @@ case "${COMMAND}" in
     clean-all) do_clean_all ;;
     install) do_install ;;
     run) do_run ;;
+    test) do_build; (cd "${BUILD_DIR}" && ctest --output-on-failure) ;;
     *) die "unknown command: ${COMMAND}" ;;
 esac

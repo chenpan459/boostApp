@@ -1,5 +1,6 @@
 #include "infra/net/http_server.hpp"
 
+#include "core/http_util.hpp"
 #include "core/logger.hpp"
 #include "domain/gateway/request.hpp"
 
@@ -10,8 +11,11 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 
+#include <algorithm>
 #include <chrono>
+#include <cctype>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unistd.h>
 
@@ -27,13 +31,33 @@ std::string verb_to_string(http::verb method) {
     return std::string(http::to_string(method));
 }
 
+std::string header_key(std::string_view name) {
+    std::string key(name);
+    std::transform(key.begin(), key.end(), key.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return key;
+}
+
 domain::GatewayRequest make_request(const http::request<http::string_body>& request,
                                     const std::string& client) {
     domain::GatewayRequest req;
     req.method = verb_to_string(request.method());
-    req.path = std::string(request.target());
+    auto [path, query] = NV_NS_CORE::split_path_query(request.target());
+    req.path = std::move(path);
+    req.query = std::move(query);
     req.body = request.body();
     req.client = client;
+
+    const auto it = request.find("X-Request-Id");
+    if (it != request.end()) {
+        req.request_id = std::string(it->value());
+    }
+
+    for (const auto& field : request.base()) {
+        req.headers[header_key(field.name_string())] = std::string(field.value());
+    }
+
     const auto now = std::chrono::steady_clock::now().time_since_epoch();
     req.received_ns = static_cast<std::uint64_t>(
         std::chrono::duration_cast<std::chrono::nanoseconds>(now).count());
@@ -55,8 +79,14 @@ void send_gateway_response(http::response<http::string_body>& response,
 
 class TcpGatewaySession : public std::enable_shared_from_this<TcpGatewaySession> {
 public:
-    TcpGatewaySession(beast::tcp_stream stream, service::Gateway& gateway, std::string client)
-        : stream_(std::move(stream)), gateway_(gateway), client_(std::move(client)) {}
+    TcpGatewaySession(beast::tcp_stream stream,
+                      service::Gateway& gateway,
+                      std::string client,
+                      std::size_t max_body_bytes)
+        : stream_(std::move(stream)),
+          gateway_(gateway),
+          client_(std::move(client)),
+          max_body_bytes_(max_body_bytes) {}
 
     void run() {
         do_read();
@@ -64,12 +94,14 @@ public:
 
 private:
     void do_read() {
+        parser_.emplace();
+        parser_->body_limit(max_body_bytes_);
         request_ = {};
         stream_.expires_after(std::chrono::seconds(30));
         http::async_read(
             stream_,
             buffer_,
-            request_,
+            *parser_,
             beast::bind_front_handler(&TcpGatewaySession::on_read, shared_from_this()));
     }
 
@@ -77,9 +109,16 @@ private:
         if (ec == http::error::end_of_stream) {
             return;
         }
-        if (ec) {
+        if (ec == http::error::body_limit) {
+            send_response({413, "application/json", R"({"error":"payload too large"})"});
             return;
         }
+        if (ec) {
+            BOOSTAPP_LOG(Warning, "tcp read error: " + ec.message());
+            return;
+        }
+
+        request_ = parser_->release();
 
         if (request_.method() != http::verb::get && request_.method() != http::verb::post) {
             send_response({405, "application/json", R"({"error":"method not allowed"})"});
@@ -106,6 +145,7 @@ private:
 
     void on_write(bool close, beast::error_code ec, std::size_t) {
         if (ec) {
+            BOOSTAPP_LOG(Warning, "tcp write error: " + ec.message());
             return;
         }
         if (close) {
@@ -119,15 +159,19 @@ private:
     beast::tcp_stream stream_;
     service::Gateway& gateway_;
     std::string client_;
+    std::size_t max_body_bytes_;
     beast::flat_buffer buffer_;
+    std::optional<http::request_parser<http::string_body>> parser_;
     http::request<http::string_body> request_;
     http::response<http::string_body> response_;
 };
 
 class UnixGatewaySession : public std::enable_shared_from_this<UnixGatewaySession> {
 public:
-    UnixGatewaySession(beast::basic_stream<asio::local::stream_protocol> stream, service::Gateway& gateway)
-        : stream_(std::move(stream)), gateway_(gateway) {}
+    UnixGatewaySession(beast::basic_stream<asio::local::stream_protocol> stream,
+                       service::Gateway& gateway,
+                       std::size_t max_body_bytes)
+        : stream_(std::move(stream)), gateway_(gateway), max_body_bytes_(max_body_bytes) {}
 
     void run() {
         do_read();
@@ -135,12 +179,14 @@ public:
 
 private:
     void do_read() {
+        parser_.emplace();
+        parser_->body_limit(max_body_bytes_);
         request_ = {};
         stream_.expires_after(std::chrono::seconds(30));
         http::async_read(
             stream_,
             buffer_,
-            request_,
+            *parser_,
             beast::bind_front_handler(&UnixGatewaySession::on_read, shared_from_this()));
     }
 
@@ -148,9 +194,16 @@ private:
         if (ec == http::error::end_of_stream) {
             return;
         }
-        if (ec) {
+        if (ec == http::error::body_limit) {
+            send_response({413, "application/json", R"({"error":"payload too large"})"});
             return;
         }
+        if (ec) {
+            BOOSTAPP_LOG(Warning, "unix read error: " + ec.message());
+            return;
+        }
+
+        request_ = parser_->release();
 
         if (request_.method() != http::verb::get && request_.method() != http::verb::post) {
             send_response({405, "application/json", R"({"error":"method not allowed"})"});
@@ -177,6 +230,7 @@ private:
 
     void on_write(bool close, beast::error_code ec, std::size_t) {
         if (ec) {
+            BOOSTAPP_LOG(Warning, "unix write error: " + ec.message());
             return;
         }
         if (close) {
@@ -187,7 +241,9 @@ private:
 
     beast::basic_stream<asio::local::stream_protocol> stream_;
     service::Gateway& gateway_;
+    std::size_t max_body_bytes_;
     beast::flat_buffer buffer_;
+    std::optional<http::request_parser<http::string_body>> parser_;
     http::request<http::string_body> request_;
     http::response<http::string_body> response_;
 };
@@ -196,8 +252,15 @@ private:
 
 class HttpServer::TcpListener : public std::enable_shared_from_this<HttpServer::TcpListener> {
 public:
-    TcpListener(asio::io_context& io, tcp::endpoint endpoint, service::Gateway& gateway)
-        : io_(io), acceptor_(io), gateway_(gateway) {
+    TcpListener(IoContextPool& pool,
+                tcp::endpoint endpoint,
+                service::Gateway& gateway,
+                std::size_t max_body_bytes)
+        : pool_(pool),
+          io_(pool.io_context()),
+          acceptor_(io_),
+          gateway_(gateway),
+          max_body_bytes_(max_body_bytes) {
         beast::error_code ec;
         acceptor_.open(endpoint.protocol(), ec);
         if (ec) {
@@ -229,28 +292,42 @@ private:
     }
 
     void on_accept(beast::error_code ec, tcp::socket socket) {
-        if (!ec) {
-            std::string client = "unknown";
-            beast::error_code endpoint_ec;
-            const auto endpoint = socket.remote_endpoint(endpoint_ec);
-            if (!endpoint_ec) {
-                client = endpoint.address().to_string() + ":" + std::to_string(endpoint.port());
+        if (ec) {
+            if (ec != asio::error::operation_aborted) {
+                BOOSTAPP_LOG(Warning, "tcp accept error: " + ec.message());
             }
-            std::make_shared<TcpGatewaySession>(beast::tcp_stream(std::move(socket)), gateway_, std::move(client))
-                ->run();
+            do_accept();
+            return;
         }
+
+        std::string client = "unknown";
+        beast::error_code endpoint_ec;
+        const auto endpoint = socket.remote_endpoint(endpoint_ec);
+        if (!endpoint_ec) {
+            client = endpoint.address().to_string() + ":" + std::to_string(endpoint.port());
+        }
+
+        std::make_shared<TcpGatewaySession>(beast::tcp_stream(std::move(socket)), gateway_, std::move(client), max_body_bytes_)
+                ->run();
+
         do_accept();
     }
 
+    IoContextPool& pool_;
     asio::io_context& io_;
     tcp::acceptor acceptor_;
     service::Gateway& gateway_;
+    std::size_t max_body_bytes_;
 };
 
 class HttpServer::UnixListener : public std::enable_shared_from_this<HttpServer::UnixListener> {
 public:
-    UnixListener(asio::io_context& io, const std::string& path, service::Gateway& gateway)
-        : io_(io), acceptor_(io), gateway_(gateway) {
+    UnixListener(IoContextPool& pool, const std::string& path, service::Gateway& gateway, std::size_t max_body_bytes)
+        : pool_(pool),
+          io_(pool.io_context()),
+          acceptor_(io_),
+          gateway_(gateway),
+          max_body_bytes_(max_body_bytes) {
         ::unlink(path.c_str());
         asio::local::stream_protocol::endpoint endpoint(path);
         beast::error_code ec;
@@ -280,34 +357,45 @@ private:
     }
 
     void on_accept(beast::error_code ec, asio::local::stream_protocol::socket socket) {
+        if (ec) {
+            if (ec != asio::error::operation_aborted) {
+                BOOSTAPP_LOG(Warning, "unix accept error: " + ec.message());
+            }
+            do_accept();
+            return;
+        }
+
         if (!ec) {
             std::make_shared<UnixGatewaySession>(
                 beast::basic_stream<asio::local::stream_protocol>(std::move(socket)),
-                gateway_)
+                gateway_,
+                max_body_bytes_)
                 ->run();
         }
         do_accept();
     }
 
+    IoContextPool& pool_;
     asio::io_context& io_;
     asio::local::stream_protocol::acceptor acceptor_;
     service::Gateway& gateway_;
+    std::size_t max_body_bytes_;
 };
 
 HttpServer::HttpServer(const core::AppConfig& config, IoContextPool& pool, service::Gateway& gateway)
     : config_(config), pool_(pool), gateway_(gateway) {}
 
 void HttpServer::start() {
-    auto& io = pool_.io_context();
+    const auto max_body_bytes = static_cast<std::size_t>(config_.max_body_kb) * 1024;
 
     const auto address = asio::ip::make_address(config_.listen_address);
     tcp::endpoint endpoint(address, config_.listen_port);
-    tcp_listener_ = std::make_shared<TcpListener>(io, endpoint, gateway_);
+    tcp_listener_ = std::make_shared<TcpListener>(pool_, endpoint, gateway_, max_body_bytes);
     tcp_listener_->run();
     BOOSTAPP_LOG(Info, "gateway listening on " + config_.listen_address + ":" + std::to_string(config_.listen_port));
 
     if (!config_.unix_socket.empty()) {
-        unix_listener_ = std::make_shared<UnixListener>(io, config_.unix_socket, gateway_);
+        unix_listener_ = std::make_shared<UnixListener>(pool_, config_.unix_socket, gateway_, max_body_bytes);
         unix_listener_->run();
         BOOSTAPP_LOG(Info, "gateway listening on unix://" + config_.unix_socket);
     }

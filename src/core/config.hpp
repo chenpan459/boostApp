@@ -19,11 +19,15 @@ struct AppConfig {
     std::string log_level{"info"};
     std::uint32_t log_max_size_mb{10};
 
+    std::string gateway_api_key;
+    std::uint32_t gateway_rate_limit_rps{0};
+
     int watchdog_sec{0};
     int cpu_affinity{-1};
 
     std::string event_dir{"data/events"};
     bool persist{true};
+    std::uint32_t event_max_size_mb{50};
 };
 
 AppConfig load_config(const std::string& path);

@@ -128,14 +128,14 @@ void log_write(LogLevel level, const std::string& message) {
 
     std::ostringstream line;
     line << now_string() << " [" << level_name(level) << "] " << message;
+    const std::string text = line.str();
 
     std::lock_guard lock(g_log_mutex);
-    std::cerr << line.str() << '\n';
+    std::cerr << text << '\n';
     if (g_file && g_file->is_open()) {
-        const auto line_bytes = line.str().size() + 1;
-        rotate_if_needed_unlocked(line_bytes);
+        rotate_if_needed_unlocked(text.size() + 1);
         if (g_file && g_file->is_open()) {
-            (*g_file) << line.str() << '\n';
+            (*g_file) << text << '\n';
             g_file->flush();
         }
     }

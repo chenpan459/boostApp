@@ -11,17 +11,9 @@ IoContextPool::Entry::Entry(std::size_t id)
     (void)id;
 }
 
-IoContextPool::IoContextPool(std::size_t thread_count) {
-    if (thread_count == 0) {
-        thread_count = 1;
-    }
-
-    entries_.reserve(thread_count);
-    for (std::size_t i = 0; i < thread_count; ++i) {
-        entries_.push_back(std::make_unique<Entry>(i));
-    }
-
-    BOOSTAPP_LOG(Info, "io_context pool size=" + std::to_string(thread_count));
+IoContextPool::IoContextPool(std::size_t thread_count) : thread_count_(thread_count == 0 ? 1 : thread_count) {
+    entries_.push_back(std::make_unique<Entry>(0));
+    BOOSTAPP_LOG(Info, "io_context pool size=" + std::to_string(thread_count_));
 }
 
 boost::asio::io_context& IoContextPool::io_context() {
@@ -29,15 +21,14 @@ boost::asio::io_context& IoContextPool::io_context() {
 }
 
 boost::asio::io_context& IoContextPool::next_io_context() {
-    const auto index = round_robin_.fetch_add(1, std::memory_order_relaxed) % entries_.size();
-    return entries_[index]->io;
+    return entries_.front()->io;
 }
 
 void IoContextPool::run() {
-    threads_.reserve(entries_.size());
-    for (std::size_t i = 0; i < entries_.size(); ++i) {
-        threads_.emplace_back([this, i] {
-            entries_[i]->io.run();
+    threads_.reserve(thread_count_);
+    for (std::size_t i = 0; i < thread_count_; ++i) {
+        threads_.emplace_back([this] {
+            entries_.front()->io.run();
         });
     }
 

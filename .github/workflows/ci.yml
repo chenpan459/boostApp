@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake curl
+
+      - name: Build Boost and project
+        run: ./build.sh rebuild
+
+      - name: Run unit tests
+        run: cd build && ctest --output-on-failure
+
+      - name: Smoke test
+        run: ./build.sh run
+
+  sanitize:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake curl
+
+      - name: Build with sanitizers
+        run: |
+          ./build.sh boost
+          cmake -S . -B build-asan \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DNVCOMM_SANITIZE=ON \
+            -DBOOSTAPP_BOOST_ROOT="$PWD/lib/boost"
+          cmake --build build-asan -j$(nproc)
+
+      - name: Run tests under sanitizer
+        run: cd build-asan && ctest --output-on-failure

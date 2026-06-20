@@ -2,6 +2,8 @@
 
 #include "core/config.hpp"
 #include "namespace.hpp"
+#include "platform/watchdog.hpp"
+#include "service/gateway_service.hpp"
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
@@ -37,6 +39,8 @@ private:
     boost::asio::io_context io_context_;
     boost::asio::signal_set signals_;
     boost::asio::steady_timer watchdog_timer_;
+    std::unique_ptr<platform::Watchdog> watchdog_;
+    std::unique_ptr<service::GatewayService> gateway_service_;
     std::atomic<bool> running_{true};
     int exit_code_{0};
 };

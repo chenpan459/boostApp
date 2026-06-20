@@ -5,20 +5,12 @@
 #include "platform/paths.hpp"
 #include "platform/systemd_notify.hpp"
 #include "platform/watchdog.hpp"
-#include "service/gateway_service.hpp"
 
 #include <csignal>
 #include <iostream>
-#include <memory>
 #include <sstream>
 
 NV_NS_CORE_BEGIN
-namespace {
-
-std::unique_ptr<platform::Watchdog> g_watchdog;
-std::unique_ptr<service::GatewayService> g_gateway_service;
-
-}  // namespace
 
 Application::Application(int argc, char** argv, std::string app_name, bool enable_platform)
     : app_name_(std::move(app_name)),
@@ -36,9 +28,13 @@ Application::Application(int argc, char** argv, std::string app_name, bool enabl
 }
 
 Application::~Application() {
+    if (gateway_service_) {
+        gateway_service_->stop();
+        gateway_service_.reset();
+    }
     if (enable_platform_) {
         platform::notify_stopping();
-        g_watchdog.reset();
+        watchdog_.reset();
     }
     shutdown_logging();
 }
@@ -63,8 +59,8 @@ void Application::setup_platform() {
     platform::bind_current_thread_to_cpu(config_.cpu_affinity);
 
     if (config_.watchdog_sec > 0) {
-        g_watchdog = std::make_unique<platform::Watchdog>();
-        g_watchdog->open();
+        watchdog_ = std::make_unique<platform::Watchdog>();
+        watchdog_->open();
     }
 }
 
@@ -75,8 +71,8 @@ void Application::setup_signals() {
         }
         BOOSTAPP_LOG(Info, "received signal " + std::to_string(signo) + ", shutting down");
         running_.store(false);
-        if (g_gateway_service) {
-            g_gateway_service->stop();
+        if (gateway_service_) {
+            gateway_service_->stop();
         }
         io_context_.stop();
     });
@@ -99,8 +95,8 @@ void Application::schedule_watchdog_feed() {
             return;
         }
 
-        if (g_watchdog && g_watchdog->is_open()) {
-            g_watchdog->feed();
+        if (watchdog_ && watchdog_->is_open()) {
+            watchdog_->feed();
         }
         if (platform::systemd_booted()) {
             platform::notify_watchdog();
@@ -117,13 +113,13 @@ int Application::run_network() {
         schedule_watchdog_feed();
     }
 
-    g_gateway_service = std::make_unique<service::GatewayService>(config_, running_);
-    g_gateway_service->start();
+    gateway_service_ = std::make_unique<service::GatewayService>(config_, running_);
+    gateway_service_->start();
 
     io_context_.run();
     running_.store(false);
-    g_gateway_service->stop();
-    g_gateway_service.reset();
+    gateway_service_->stop();
+    gateway_service_.reset();
 
     BOOSTAPP_LOG(Info, app_name_ + " stopped");
     return exit_code_;

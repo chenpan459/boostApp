@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/config.hpp"
+#include "domain/ports/event_store.hpp"
 #include "infra/net/http_server.hpp"
 #include "infra/net/io_context_pool.hpp"
 #include "namespace.hpp"
@@ -17,7 +18,8 @@ NV_NS_SERVICE_BEGIN
 class GatewayFactory {
 public:
     static std::unique_ptr<Gateway> create(const core::AppConfig& config,
-                                           boost::asio::thread_pool& workers);
+                                           boost::asio::thread_pool& workers,
+                                           std::shared_ptr<domain::IEventStore> event_store);
 };
 
 class GatewayService {

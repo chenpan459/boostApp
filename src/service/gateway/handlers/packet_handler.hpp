@@ -11,13 +11,13 @@ NV_NS_SERVICE_BEGIN
 
 class PacketHandler : public domain::IHandler {
 public:
-    explicit PacketHandler(const core::AppConfig& config);
+    PacketHandler(const core::AppConfig& config, std::shared_ptr<domain::IEventStore> event_store);
 
     void handle(domain::GatewayContext& ctx) override;
 
 private:
     core::AppConfig config_;
-    std::unique_ptr<domain::IEventStore> event_store_;
+    std::shared_ptr<domain::IEventStore> event_store_;
 };
 
 NV_NS_SERVICE_END

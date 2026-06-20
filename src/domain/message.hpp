@@ -13,6 +13,7 @@ struct Message {
     std::uint32_t priority{0};
     std::uint64_t timestamp_ns{0};
     std::string source;
+    std::string request_id;
 };
 
 NV_NS_DOMAIN_END

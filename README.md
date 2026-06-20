@@ -18,10 +18,13 @@ HttpServer (Boost.Beast, TCP + Unix socket)
   ▼
 Gateway
   ├─ Middleware Pipeline
-  │    ├─ AccessLogMiddleware      访问日志
-  │    └─ BodyLimitMiddleware      请求体大小限制
+  │    ├─ RequestIdMiddleware      请求 ID（支持 X-Request-Id 透传）
+  │    ├─ RateLimitMiddleware      按客户端 IP 限流
+  │    ├─ AuthMiddleware           API Key / Bearer 鉴权
+  │    ├─ BodyLimitMiddleware      请求体大小限制
+  │    └─ AccessLogMiddleware      访问日志（含 request_id）
   │
-  ├─ Router (method + path 匹配)
+  ├─ Router (method + path 匹配，不含 query string)
   │    ├─ GET  /health        → HealthHandler   (同步)
   │    └─ POST /api/*         → PacketHandler   (异步 worker)
   │
@@ -42,7 +45,7 @@ Gateway
 
 ### 并发模型
 
-1. **IO 线程池**（`server.threads`）：多个 `io_context` 线程负责连接与 HTTP 读写。
+1. **IO 线程池**（`server.threads`）：单 `io_context` 多线程 `run()`，并发处理连接与 HTTP 读写；Beast `body_limit` 在读阶段拒绝超大 body。
 2. **Worker 线程池**（`server.worker_threads`）：标记 `async=true` 的路由在 worker 中执行 Handler。
 3. 处理完成后通过 `asio::post` 回到连接 executor 写回响应。
 
@@ -56,7 +59,7 @@ Gateway
 POST 响应示例：
 
 ```json
-{"status":"ok","path":"/api/v1/packet","bytes":16,"client":"127.0.0.1:60282"}
+{"status":"ok","request_id":"19ee41c8f1b-1a5934cdfcdc7aca","path":"/api/v1/packet","bytes":16,"client":"127.0.0.1:56538"}
 ```
 
 ## 目录结构
@@ -129,7 +132,11 @@ sudo apt install build-essential cmake curl
 ```bash
 ./build.sh              # 构建
 ./build.sh rebuild      # 清理重编
+./build.sh test         # 单元测试
 ./build.sh run          # HTTP 冒烟测试
+
+# 可选：ASan/UBSan 构建
+cmake -S . -B build-asan -DNVCOMM_SANITIZE=ON -DBOOSTAPP_BOOST_ROOT="$PWD/lib/boost"
 ```
 
 ## 运行
@@ -160,6 +167,10 @@ worker_threads = 4       # 异步 Handler worker 数
 max_body_kb = 1024
 unix_socket = run/nvcomm.sock
 
+[gateway]
+api_key =                   # 留空则关闭鉴权（/health 始终放行）
+rate_limit_rps = 100        # 0 表示不限流
+
 [log]
 dir = log
 level = info
@@ -171,6 +182,7 @@ cpu_affinity = -1
 [data]
 event_dir = data/events
 persist = true
+event_max_size_mb = 50      # 事件文件轮转大小
 ```
 
 ## RK3588 板端部署

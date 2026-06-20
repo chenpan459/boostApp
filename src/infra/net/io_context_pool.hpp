@@ -4,7 +4,6 @@
 
 #include <boost/asio/io_context.hpp>
 
-#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <thread>
@@ -32,7 +31,7 @@ private:
 
     std::vector<std::unique_ptr<Entry>> entries_;
     std::vector<std::thread> threads_;
-    std::atomic<std::size_t> round_robin_{0};
+    std::size_t thread_count_{1};
 };
 
 NV_NS_INFRA_NET_END

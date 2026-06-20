@@ -154,11 +154,15 @@ AppConfig load_config(const std::string& path) {
     cfg.log_level = get_value(values, "log", "level", cfg.log_level);
     cfg.log_max_size_mb = get_value(values, "log", "max_size_mb", cfg.log_max_size_mb);
 
+    cfg.gateway_api_key = get_value(values, "gateway", "api_key", cfg.gateway_api_key);
+    cfg.gateway_rate_limit_rps = get_value(values, "gateway", "rate_limit_rps", cfg.gateway_rate_limit_rps);
+
     cfg.watchdog_sec = get_value(values, "runtime", "watchdog_sec", cfg.watchdog_sec);
     cfg.cpu_affinity = get_value(values, "runtime", "cpu_affinity", cfg.cpu_affinity);
 
     cfg.event_dir = get_value(values, "data", "event_dir", cfg.event_dir);
     cfg.persist = get_value(values, "data", "persist", cfg.persist);
+    cfg.event_max_size_mb = get_value(values, "data", "event_max_size_mb", cfg.event_max_size_mb);
     return cfg;
 }
 

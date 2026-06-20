@@ -1,20 +1,28 @@
 #include "service/gateway_service.hpp"
 
 #include "core/logger.hpp"
+#include "infra/persistence/file_event_store.hpp"
 #include "service/gateway/handlers/health_handler.hpp"
 #include "service/gateway/handlers/packet_handler.hpp"
 #include "service/gateway/middleware/access_log_middleware.hpp"
+#include "service/gateway/middleware/auth_middleware.hpp"
 #include "service/gateway/middleware/body_limit_middleware.hpp"
+#include "service/gateway/middleware/rate_limit_middleware.hpp"
+#include "service/gateway/middleware/request_id_middleware.hpp"
 
 NV_NS_SERVICE_BEGIN
 
 std::unique_ptr<Gateway> GatewayFactory::create(const core::AppConfig& config,
-                                                boost::asio::thread_pool& workers) {
+                                                boost::asio::thread_pool& workers,
+                                                std::shared_ptr<domain::IEventStore> event_store) {
     auto gateway = std::make_unique<Gateway>(workers);
     const auto max_body_bytes = static_cast<std::size_t>(config.max_body_kb) * 1024;
 
-    gateway->use(std::make_shared<AccessLogMiddleware>());
+    gateway->use(std::make_shared<RequestIdMiddleware>());
+    gateway->use(std::make_shared<RateLimitMiddleware>(config.gateway_rate_limit_rps));
+    gateway->use(std::make_shared<AuthMiddleware>(config.gateway_api_key));
     gateway->use(std::make_shared<BodyLimitMiddleware>(max_body_bytes));
+    gateway->use(std::make_shared<AccessLogMiddleware>());
 
     gateway->add_route({.method = "GET",
                         .path = "/health",
@@ -26,7 +34,7 @@ std::unique_ptr<Gateway> GatewayFactory::create(const core::AppConfig& config,
                         .path = "/api/",
                         .prefix = true,
                         .async = true,
-                        .handler = std::make_shared<PacketHandler>(config)});
+                        .handler = std::make_shared<PacketHandler>(config, std::move(event_store))});
 
     return gateway;
 }
@@ -40,7 +48,14 @@ void GatewayService::start() {
 
     pool_ = std::make_unique<NV_NS_INFRA_NET::IoContextPool>(io_threads);
     workers_ = std::make_unique<boost::asio::thread_pool>(worker_threads);
-    gateway_ = GatewayFactory::create(config_, *workers_);
+
+    std::shared_ptr<domain::IEventStore> event_store;
+    if (config_.persist) {
+        event_store = std::make_shared<infra::persistence::FileEventStore>(
+            config_.event_dir, config_.event_max_size_mb, *workers_);
+    }
+
+    gateway_ = GatewayFactory::create(config_, *workers_, std::move(event_store));
     http_server_ = std::make_unique<NV_NS_INFRA_NET::HttpServer>(config_, *pool_, *gateway_);
     http_server_->start();
 
