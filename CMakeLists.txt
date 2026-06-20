@@ -38,8 +38,13 @@ add_library(nvcomm_core STATIC
     src/infra/persistence/file_event_store.cpp
     src/infra/net/io_context_pool.cpp
     src/infra/net/http_server.cpp
-    src/service/packet_processor.cpp
-    src/service/network_service.cpp
+    src/service/gateway/router.cpp
+    src/service/gateway/gateway.cpp
+    src/service/gateway/middleware/access_log_middleware.cpp
+    src/service/gateway/middleware/body_limit_middleware.cpp
+    src/service/gateway/handlers/health_handler.cpp
+    src/service/gateway/handlers/packet_handler.cpp
+    src/service/gateway_service.cpp
 )
 
 target_include_directories(nvcomm_core PUBLIC

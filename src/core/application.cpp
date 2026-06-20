@@ -5,7 +5,7 @@
 #include "platform/paths.hpp"
 #include "platform/systemd_notify.hpp"
 #include "platform/watchdog.hpp"
-#include "service/network_service.hpp"
+#include "service/gateway_service.hpp"
 
 #include <csignal>
 #include <iostream>
@@ -16,7 +16,7 @@ NV_NS_CORE_BEGIN
 namespace {
 
 std::unique_ptr<platform::Watchdog> g_watchdog;
-std::unique_ptr<service::NetworkService> g_network_service;
+std::unique_ptr<service::GatewayService> g_gateway_service;
 
 }  // namespace
 
@@ -75,8 +75,8 @@ void Application::setup_signals() {
         }
         BOOSTAPP_LOG(Info, "received signal " + std::to_string(signo) + ", shutting down");
         running_.store(false);
-        if (g_network_service) {
-            g_network_service->stop();
+        if (g_gateway_service) {
+            g_gateway_service->stop();
         }
         io_context_.stop();
     });
@@ -110,20 +110,20 @@ void Application::schedule_watchdog_feed() {
 }
 
 int Application::run_network() {
-    BOOSTAPP_LOG(Info, app_name_ + " starting network service");
+    BOOSTAPP_LOG(Info, app_name_ + " starting gateway");
 
     if (enable_platform_) {
         platform::notify_ready();
         schedule_watchdog_feed();
     }
 
-    g_network_service = std::make_unique<service::NetworkService>(config_, running_);
-    g_network_service->start();
+    g_gateway_service = std::make_unique<service::GatewayService>(config_, running_);
+    g_gateway_service->start();
 
     io_context_.run();
     running_.store(false);
-    g_network_service->stop();
-    g_network_service.reset();
+    g_gateway_service->stop();
+    g_gateway_service.reset();
 
     BOOSTAPP_LOG(Info, app_name_ + " stopped");
     return exit_code_;

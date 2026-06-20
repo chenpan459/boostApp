@@ -1,5 +1,5 @@
 [Unit]
-Description=NV Communication Daemon (nginx backend)
+Description=NV Communication Gateway (nginx backend)
 After=network.target nginx.service
 
 [Service]
