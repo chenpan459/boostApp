@@ -28,7 +28,7 @@ Application::Application(int argc, char** argv, std::string app_name, bool enabl
       watchdog_timer_(io_context_) {
     parse_args(argc, argv);
     config_ = load_config(config_path_);
-    init_logging(config_.log_dir, config_.log_level);
+    init_logging(config_.log_dir, config_.log_level, config_.log_max_size_mb);
     setup_signals();
     if (enable_platform_) {
         setup_platform();

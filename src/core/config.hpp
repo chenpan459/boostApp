@@ -17,7 +17,7 @@ struct AppConfig {
 
     std::string log_dir{"log"};
     std::string log_level{"info"};
-    std::uint32_t log_max_size_mb{32};
+    std::uint32_t log_max_size_mb{10};
 
     int watchdog_sec{0};
     int cpu_affinity{-1};
