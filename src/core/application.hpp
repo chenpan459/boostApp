@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/config.hpp"
+#include "namespace.hpp"
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
@@ -11,7 +12,7 @@
 #include <memory>
 #include <string>
 
-namespace boostapp::core {
+NV_NS_CORE_BEGIN
 
 class Application {
 public:
@@ -30,7 +31,7 @@ private:
     void setup_signals();
 
     std::string app_name_;
-    std::string config_path_{"config/boardcomm.json"};
+    std::string config_path_{"config/boardcomm.conf"};
     AppConfig config_;
     boost::asio::io_context io_context_;
     boost::asio::signal_set signals_;
@@ -38,4 +39,4 @@ private:
     int exit_code_{0};
 };
 
-}  // namespace boostapp::core
+NV_NS_CORE_END

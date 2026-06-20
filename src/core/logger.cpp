@@ -8,7 +8,7 @@
 #include <memory>
 #include <sstream>
 
-namespace boostapp::core {
+NV_NS_CORE_BEGIN
 namespace {
 
 std::mutex g_log_mutex;
@@ -86,4 +86,4 @@ void log_write(LogLevel level, const std::string& message) {
     }
 }
 
-}  // namespace boostapp::core
+NV_NS_CORE_END

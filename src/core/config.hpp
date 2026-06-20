@@ -1,9 +1,11 @@
 #pragma once
 
+#include "namespace.hpp"
+
 #include <cstdint>
 #include <string>
 
-namespace boostapp::core {
+NV_NS_CORE_BEGIN
 
 struct AppConfig {
     std::string mq_in_name{"boardcomm_in"};
@@ -17,4 +19,4 @@ struct AppConfig {
 
 AppConfig load_config(const std::string& path);
 
-}  // namespace boostapp::core
+NV_NS_CORE_END

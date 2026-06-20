@@ -5,7 +5,7 @@
 #include <sstream>
 #include <thread>
 
-namespace boostapp::service {
+NV_NS_SERVICE_BEGIN
 
 BoardService::BoardService(core::AppConfig config,
                            std::unique_ptr<domain::IMessageBus> inbound,
@@ -40,4 +40,4 @@ void BoardService::run(std::atomic<bool>& running) {
     BOOSTAPP_LOG(Info, "board service loop stopped");
 }
 
-}  // namespace boostapp::service
+NV_NS_SERVICE_END

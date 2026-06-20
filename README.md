@@ -16,7 +16,7 @@ boardcomm_pub  --[inbound MQ]-->  boardcommd  --[outbound MQ]-->  boardcomm_sub
 | `boardcomm_pub` | 发布端，向 inbound 队列写入消息 |
 | `boardcomm_sub` | 订阅端，从 outbound 队列读取消息，支持按 topic 过滤 |
 
-技术栈：Boost.Asio（信号/异步 IO）、Boost.Interprocess（消息队列）、Boost.PropertyTree（JSON 配置）。
+技术栈：Boost.Asio（信号/异步 IO）、Boost.Interprocess（消息队列）、conf 配置文件。
 
 ## 目录结构
 
@@ -24,7 +24,7 @@ boardcomm_pub  --[inbound MQ]-->  boardcommd  --[outbound MQ]-->  boardcomm_sub
 boostApp/
 ├── build.sh                 # 构建脚本（推荐）
 ├── CMakeLists.txt
-├── config/boardcomm.json    # 默认配置
+├── config/boardcomm.conf    # 默认配置（conf 风格）
 │
 ├── deps/
 │   └── boost_1_84_0/        # Boost 源码（已纳入 git）
@@ -130,10 +130,23 @@ cmake --build build -j$(nproc)
 
 ## 配置
 
-默认配置文件：`config/boardcomm.json`，可通过 `-c` / `--config` 指定：
+默认配置文件：`config/boardcomm.conf`，可通过 `-c` / `--config` 指定：
 
 ```bash
-./build/boardcommd -c config/boardcomm.json
+./build/boardcommd -c config/boardcomm.conf
+```
+
+conf 格式示例（`#` 或 `;` 开头为注释，支持 `key = value`）：
+
+```conf
+# message queue
+mq_in_name = boardcomm_in
+mq_out_name = boardcomm_out
+max_messages = 128
+
+# logging
+log_dir = log
+log_level = info
 ```
 
 | 字段 | 说明 | 默认值 |

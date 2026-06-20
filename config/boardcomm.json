@@ -1,9 +1,0 @@
-{
-    "mq_in_name": "boardcomm_in",
-    "mq_out_name": "boardcomm_out",
-    "max_messages": 128,
-    "max_message_size": 4096,
-    "log_dir": "log",
-    "log_level": "info",
-    "poll_interval_ms": 50
-}

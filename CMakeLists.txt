@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+set(NV_NAMESPACE "boostapp" CACHE STRING "Root C++ namespace")
+
 # Third-party libraries install root (see build.sh).
 set(BOOSTAPP_LIB_DIR "${CMAKE_SOURCE_DIR}/lib"
     CACHE PATH "Third-party libraries install root")
@@ -43,6 +45,7 @@ target_include_directories(boostapp_core PUBLIC
 target_compile_definitions(boostapp_core PUBLIC
     BOOST_ASIO_NO_DEPRECATED
     BOOST_ALL_NO_LIB
+    NV_NAMESPACE=${NV_NAMESPACE}
 )
 
 target_link_libraries(boostapp_core PUBLIC
@@ -64,6 +67,6 @@ install(TARGETS boardcommd boardcomm_pub boardcomm_sub
     RUNTIME DESTINATION bin
 )
 
-install(FILES config/boardcomm.json
+install(FILES config/boardcomm.conf
     DESTINATION etc/boardcomm
 )

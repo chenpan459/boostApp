@@ -11,7 +11,7 @@
 #include <thread>
 #include <vector>
 
-namespace boostapp::infra::ipc {
+NV_NS_INFRA_IPC_BEGIN
 namespace bip = boost::interprocess;
 
 namespace {
@@ -91,4 +91,4 @@ std::unique_ptr<MessageQueueBus> make_outbound_bus(const core::AppConfig& config
     return std::make_unique<MessageQueueBus>(config, QueueRole::Outbound);
 }
 
-}  // namespace boostapp::infra::ipc
+NV_NS_INFRA_IPC_END

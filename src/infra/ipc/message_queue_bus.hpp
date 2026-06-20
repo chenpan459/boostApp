@@ -2,11 +2,12 @@
 
 #include "core/config.hpp"
 #include "domain/ports/message_bus.hpp"
+#include "namespace.hpp"
 
 #include <memory>
 #include <string>
 
-namespace boostapp::infra::ipc {
+NV_NS_INFRA_IPC_BEGIN
 
 enum class QueueRole { Inbound, Outbound };
 
@@ -29,4 +30,4 @@ private:
 std::unique_ptr<MessageQueueBus> make_inbound_bus(const core::AppConfig& config);
 std::unique_ptr<MessageQueueBus> make_outbound_bus(const core::AppConfig& config);
 
-}  // namespace boostapp::infra::ipc
+NV_NS_INFRA_IPC_END

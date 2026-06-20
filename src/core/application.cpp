@@ -7,7 +7,7 @@
 #include <sstream>
 #include <thread>
 
-namespace boostapp::core {
+NV_NS_CORE_BEGIN
 
 Application::Application(int argc, char** argv, std::string app_name)
     : app_name_(std::move(app_name)), signals_(io_context_, SIGINT, SIGTERM) {
@@ -29,7 +29,7 @@ void Application::parse_args(int argc, char** argv) {
         } else if (arg == "-h" || arg == "--help") {
             std::ostringstream help;
             help << "Usage: " << app_name_ << " [options]\n"
-                 << "  -c, --config PATH   config file (default: config/boardcomm.json)\n"
+                 << "  -c, --config PATH   config file (default: config/boardcomm.conf)\n"
                  << "  -h, --help          show help\n";
             std::cout << help.str();
             std::exit(0);
@@ -66,4 +66,4 @@ int Application::run(WorkLoop work_loop) {
     return exit_code_;
 }
 
-}  // namespace boostapp::core
+NV_NS_CORE_END

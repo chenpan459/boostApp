@@ -13,3 +13,4 @@ log/*.log
 # Boost b2 intermediate build output inside source tree (not source code)
 deps/boost_*/bin.v2/
 deps/boost_*/stage/
+lib/

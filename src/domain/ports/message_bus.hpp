@@ -1,11 +1,13 @@
 #pragma once
 
+#include "namespace.hpp"
+
 #include <cstdint>
 #include <functional>
 #include <string>
 #include <string_view>
 
-namespace boostapp::domain {
+NV_NS_DOMAIN_BEGIN
 
 struct Message {
     std::string topic;
@@ -23,4 +25,4 @@ public:
     virtual bool try_receive(Message& message, int timeout_ms) = 0;
 };
 
-}  // namespace boostapp::domain
+NV_NS_DOMAIN_END

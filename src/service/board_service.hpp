@@ -2,12 +2,13 @@
 
 #include "core/config.hpp"
 #include "domain/ports/message_bus.hpp"
+#include "namespace.hpp"
 
 #include <atomic>
 #include <memory>
 #include <string>
 
-namespace boostapp::service {
+NV_NS_SERVICE_BEGIN
 
 class BoardService {
 public:
@@ -25,4 +26,4 @@ private:
     std::unique_ptr<domain::IMessageBus> outbound_;
 };
 
-}  // namespace boostapp::service
+NV_NS_SERVICE_END

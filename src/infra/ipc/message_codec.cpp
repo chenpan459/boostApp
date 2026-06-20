@@ -3,7 +3,7 @@
 #include <cstring>
 #include <stdexcept>
 
-namespace boostapp::infra::ipc {
+NV_NS_INFRA_IPC_BEGIN
 namespace {
 
 constexpr std::size_t kHeaderSize = sizeof(std::uint32_t) + sizeof(std::uint16_t);
@@ -47,4 +47,4 @@ bool decode_message(const char* data, std::size_t size, EncodedMessage& out) {
     return true;
 }
 
-}  // namespace boostapp::infra::ipc
+NV_NS_INFRA_IPC_END
