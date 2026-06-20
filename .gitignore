@@ -1,0 +1,12 @@
+build/
+deps/
+lib/
+*.o
+*.so
+boardcommd
+boardcomm_pub
+boardcomm_sub
+log/*.log
+*.tar.gz
+*.tar.bz2
+*.bin
