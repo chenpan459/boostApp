@@ -1,12 +1,16 @@
 build/
-deps/
-lib/
-*.o
-*.so
+out/
 boardcommd
 boardcomm_pub
 boardcomm_sub
 log/*.log
+*.bin
+
+# deps: commit downloaded archives; ignore extracted source trees
+deps/**/src/
+
+# ignore loose archives in project root, allow under deps/
 *.tar.gz
 *.tar.bz2
-*.bin
+!deps/**/*.tar.gz
+!deps/**/*.tar.bz2
