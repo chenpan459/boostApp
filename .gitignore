@@ -6,11 +6,12 @@ boardcomm_sub
 log/*.log
 *.bin
 
-# deps: commit downloaded archives; ignore extracted source trees
-deps/**/src/
-
 # ignore loose archives in project root, allow under deps/
 *.tar.gz
 *.tar.bz2
 !deps/**/*.tar.gz
 !deps/**/*.tar.bz2
+
+# Boost b2 intermediate build output inside source tree (not source code)
+deps/boost_*/bin.v2/
+deps/boost_*/stage/

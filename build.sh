@@ -11,10 +11,11 @@ THIRD_PARTY_LIB_DIR="${THIRD_PARTY_LIB_DIR:-${ROOT_DIR}/lib}"
 
 BOOST_VERSION="${BOOST_VERSION:-1.84.0}"
 BOOST_VERSION_TAG="${BOOST_VERSION//./_}"
-BOOST_DEPS_DIR="${ROOT_DIR}/deps/boost"
-BOOST_SRC_DIR="${BOOST_DEPS_DIR}/src/boost_${BOOST_VERSION_TAG}"
+BOOST_DEPS_DIR="${ROOT_DIR}/deps"
+BOOST_SRC_DIR="${BOOST_DEPS_DIR}/boost_${BOOST_VERSION_TAG}"
 BOOST_INSTALL_DIR="${THIRD_PARTY_LIB_DIR}/boost"
-BOOST_LEGACY_INSTALL_DIR="${BOOST_DEPS_DIR}/install"
+BOOST_LEGACY_INSTALL_DIR="${ROOT_DIR}/deps/boost/install"
+BOOST_LEGACY_SRC_DIR="${ROOT_DIR}/deps/boost/src/boost_${BOOST_VERSION_TAG}"
 BOOST_TARBALL="${BOOST_DEPS_DIR}/boost_${BOOST_VERSION_TAG}.tar.bz2"
 BOOST_URLS=(
     "https://archives.boost.io/release/${BOOST_VERSION}/source/boost_${BOOST_VERSION_TAG}.tar.bz2"
@@ -49,7 +50,7 @@ Environment:
 Third-party libraries (compiled):
   lib/boost/         Boost install prefix (include/, lib/, etc.)
 
-Boost sources (download only):
+Boost sources:
   Source tarball : ${BOOST_TARBALL}
   Source tree    : ${BOOST_SRC_DIR}
 
@@ -116,9 +117,8 @@ extract_boost() {
         return 0
     fi
 
-    mkdir -p "${BOOST_DEPS_DIR}/src"
-    log "extracting ${BOOST_TARBALL}..."
-    tar -xjf "${BOOST_TARBALL}" -C "${BOOST_DEPS_DIR}/src"
+    log "extracting ${BOOST_TARBALL} -> ${BOOST_DEPS_DIR}/"
+    tar -xjf "${BOOST_TARBALL}" -C "${BOOST_DEPS_DIR}"
 }
 
 build_boost_from_source() {
@@ -152,6 +152,11 @@ build_boost_from_source() {
 }
 
 ensure_boost() {
+    if [[ -d "${BOOST_LEGACY_SRC_DIR}" && ! -d "${BOOST_SRC_DIR}" ]]; then
+        log "migrating legacy Boost source -> ${BOOST_SRC_DIR}"
+        mv "${BOOST_LEGACY_SRC_DIR}" "${BOOST_SRC_DIR}"
+    fi
+
     if [[ -f "${BOOST_LEGACY_INSTALL_DIR}/include/boost/version.hpp" \
           && ! -f "${BOOST_INSTALL_DIR}/include/boost/version.hpp" ]]; then
         log "migrating legacy Boost install -> ${BOOST_INSTALL_DIR}"
