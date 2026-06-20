@@ -1,11 +1,5 @@
 build/
 out/
-boardcommd
-boardcomm_pub
-boardcomm_sub
-nvcommd
-nvcomm_pub
-nvcomm_sub
 log/*.log
 data/events/
 run/
