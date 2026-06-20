@@ -35,7 +35,7 @@ Commands:
   clean-lib     Remove all third-party libraries under lib/
   clean-all     Remove build directory and lib/
   install       Build and install boostApp to prefix
-  run           Build and run a quick pub/sub smoke test
+  run           Build and run a quick HTTP smoke test
 
 Options:
   -t, --type TYPE     Build type: Release or Debug (default: Release)
@@ -229,8 +229,6 @@ do_build() {
     compile
     log "done:"
     log "  ${BUILD_DIR}/nvcommd"
-    log "  ${BUILD_DIR}/nvcomm_pub"
-    log "  ${BUILD_DIR}/nvcomm_sub"
 }
 
 do_rebuild() {
@@ -247,23 +245,20 @@ do_install() {
 
 do_run() {
     do_build
-    mkdir -p "${ROOT_DIR}/log" "${ROOT_DIR}/data/events"
+    mkdir -p "${ROOT_DIR}/log" "${ROOT_DIR}/data/events" "${ROOT_DIR}/run"
 
-    log "smoke test: daemon + subscriber + publisher"
+    log "smoke test: nvcommd HTTP service"
     "${BUILD_DIR}/nvcommd" &
     local daemon_pid=$!
     sleep 0.5
 
-    "${BUILD_DIR}/nvcomm_sub" sensor/temp &
-    local sub_pid=$!
-    sleep 0.5
+    curl -fsS "http://127.0.0.1:8080/health" >/dev/null
+    curl -fsS -X POST "http://127.0.0.1:8080/api/v1/packet" \
+        -H "Content-Type: application/octet-stream" \
+        --data "sensor/temp=25.3"
+    echo
 
-    "${BUILD_DIR}/nvcomm_pub" sensor/temp 25.3
-    sleep 0.5
-
-    kill "${sub_pid}" 2>/dev/null || true
     kill "${daemon_pid}" 2>/dev/null || true
-    wait "${sub_pid}" 2>/dev/null || true
     wait "${daemon_pid}" 2>/dev/null || true
     log "smoke test finished"
 }

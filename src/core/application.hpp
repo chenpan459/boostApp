@@ -8,7 +8,6 @@
 #include <boost/asio/steady_timer.hpp>
 
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <string>
 
@@ -16,12 +15,10 @@ NV_NS_CORE_BEGIN
 
 class Application {
 public:
-    using WorkLoop = std::function<void(boost::asio::io_context&, std::atomic<bool>&)>;
-
     Application(int argc, char** argv, std::string app_name, bool enable_platform = false);
     ~Application();
 
-    int run(WorkLoop work_loop);
+    int run_network();
 
     const AppConfig& config() const { return config_; }
     boost::asio::io_context& io_context() { return io_context_; }

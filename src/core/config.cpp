@@ -129,22 +129,31 @@ bool get_value<bool>(const std::unordered_map<std::string, std::string>& values,
     throw std::runtime_error("invalid bool value for '" + make_key(section, key) + "': " + text);
 }
 
+std::uint16_t parse_port(const std::unordered_map<std::string, std::string>& values) {
+    const auto port = get_value<std::uint32_t>(values, "server", "port", 8080);
+    if (port == 0 || port > 65535) {
+        throw std::runtime_error("invalid server.port: " + std::to_string(port));
+    }
+    return static_cast<std::uint16_t>(port);
+}
+
 }  // namespace
 
 AppConfig load_config(const std::string& path) {
     const auto values = parse_conf_file(path);
 
     AppConfig cfg;
-    cfg.mq_in_name = get_value(values, "mq", "in_name", cfg.mq_in_name);
-    cfg.mq_out_name = get_value(values, "mq", "out_name", cfg.mq_out_name);
-    cfg.max_messages = get_value(values, "mq", "max_messages", cfg.max_messages);
-    cfg.max_message_size = get_value(values, "mq", "max_message_size", cfg.max_message_size);
+    cfg.listen_address = get_value(values, "server", "listen", cfg.listen_address);
+    cfg.listen_port = parse_port(values);
+    cfg.io_threads = get_value(values, "server", "threads", cfg.io_threads);
+    cfg.worker_threads = get_value(values, "server", "worker_threads", cfg.worker_threads);
+    cfg.max_body_kb = get_value(values, "server", "max_body_kb", cfg.max_body_kb);
+    cfg.unix_socket = get_value(values, "server", "unix_socket", cfg.unix_socket);
 
     cfg.log_dir = get_value(values, "log", "dir", cfg.log_dir);
     cfg.log_level = get_value(values, "log", "level", cfg.log_level);
     cfg.log_max_size_mb = get_value(values, "log", "max_size_mb", cfg.log_max_size_mb);
 
-    cfg.poll_interval_ms = get_value(values, "runtime", "poll_interval_ms", cfg.poll_interval_ms);
     cfg.watchdog_sec = get_value(values, "runtime", "watchdog_sec", cfg.watchdog_sec);
     cfg.cpu_affinity = get_value(values, "runtime", "cpu_affinity", cfg.cpu_affinity);
 

@@ -35,10 +35,11 @@ add_library(nvcomm_core STATIC
     src/platform/cpu_affinity.cpp
     src/platform/watchdog.cpp
     src/platform/systemd_notify.cpp
-    src/infra/ipc/message_codec.cpp
-    src/infra/ipc/message_queue_bus.cpp
     src/infra/persistence/file_event_store.cpp
-    src/service/message_router.cpp
+    src/infra/net/io_context_pool.cpp
+    src/infra/net/http_server.cpp
+    src/service/packet_processor.cpp
+    src/service/network_service.cpp
 )
 
 target_include_directories(nvcomm_core PUBLIC
@@ -58,16 +59,10 @@ target_link_libraries(nvcomm_core PUBLIC
     stdc++fs
 )
 
-function(add_nvcomm_target name source)
-    add_executable(${name} ${source})
-    target_link_libraries(${name} PRIVATE nvcomm_core)
-endfunction()
+add_executable(nvcommd src/app/nvcommd/main.cpp)
+target_link_libraries(nvcommd PRIVATE nvcomm_core)
 
-add_nvcomm_target(nvcommd src/app/nvcommd/main.cpp)
-add_nvcomm_target(nvcomm_pub src/app/nvcomm_pub/main.cpp)
-add_nvcomm_target(nvcomm_sub src/app/nvcomm_sub/main.cpp)
-
-install(TARGETS nvcommd nvcomm_pub nvcomm_sub
+install(TARGETS nvcommd
     RUNTIME DESTINATION bin
 )
 
@@ -77,4 +72,8 @@ install(FILES config/nvcomm.conf
 
 install(FILES config/systemd/nvcommd.service
     DESTINATION lib/systemd/system
+)
+
+install(FILES config/nginx/nvcomm.conf
+    DESTINATION etc/nginx/conf.d
 )

@@ -1,6 +1,6 @@
 [Unit]
-Description=NV Communication Daemon for RK3588
-After=network.target
+Description=NV Communication Daemon (nginx backend)
+After=network.target nginx.service
 
 [Service]
 Type=notify

@@ -8,16 +8,17 @@
 NV_NS_CORE_BEGIN
 
 struct AppConfig {
-    std::string mq_in_name{"nvcomm_in"};
-    std::string mq_out_name{"nvcomm_out"};
-    std::uint32_t max_messages{256};
-    std::uint32_t max_message_size{4096};
+    std::string listen_address{"0.0.0.0"};
+    std::uint16_t listen_port{8080};
+    std::uint32_t io_threads{4};
+    std::uint32_t worker_threads{4};
+    std::uint32_t max_body_kb{1024};
+    std::string unix_socket;
 
     std::string log_dir{"log"};
     std::string log_level{"info"};
     std::uint32_t log_max_size_mb{32};
 
-    int poll_interval_ms{20};
     int watchdog_sec{0};
     int cpu_affinity{-1};
 
