@@ -91,7 +91,7 @@ download_boost() {
     fi
 
     mkdir -p "${BOOST_DEPS_DIR}"
-    log "downloading Boost ${BOOST_VERSION}..."
+    log "downloading Boost ${BOOST_VERSION} (source dir ${BOOST_SRC_DIR} not found)..."
 
     local url
     for url in "${BOOST_URLS[@]}"; do
@@ -117,14 +117,31 @@ extract_boost() {
         return 0
     fi
 
+    if [[ ! -f "${BOOST_TARBALL}" ]]; then
+        die "Boost source missing at ${BOOST_SRC_DIR} and no tarball at ${BOOST_TARBALL}"
+    fi
+
     log "extracting ${BOOST_TARBALL} -> ${BOOST_DEPS_DIR}/"
     tar -xjf "${BOOST_TARBALL}" -C "${BOOST_DEPS_DIR}"
 }
 
-build_boost_from_source() {
-    check_boost_build_deps
+ensure_boost_source() {
+    if [[ -d "${BOOST_SRC_DIR}" && -f "${BOOST_SRC_DIR}/bootstrap.sh" ]]; then
+        log "using local Boost source: ${BOOST_SRC_DIR}"
+        return 0
+    fi
+
     download_boost
     extract_boost
+
+    if [[ ! -d "${BOOST_SRC_DIR}" || ! -f "${BOOST_SRC_DIR}/bootstrap.sh" ]]; then
+        die "Boost source not found at ${BOOST_SRC_DIR}"
+    fi
+}
+
+build_boost_from_source() {
+    check_boost_build_deps
+    ensure_boost_source
 
     mkdir -p "${THIRD_PARTY_LIB_DIR}"
     log "compiling Boost ${BOOST_VERSION} -> ${BOOST_INSTALL_DIR}"
