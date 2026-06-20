@@ -3,7 +3,12 @@ out/
 boardcommd
 boardcomm_pub
 boardcomm_sub
+nvcommd
+nvcomm_pub
+nvcomm_sub
 log/*.log
+data/events/
+run/
 *.bin
 
 # archives (exceed GitHub 100MB limit; use deps/boost_1_84_0 source instead)

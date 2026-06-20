@@ -228,9 +228,9 @@ do_build() {
     configure
     compile
     log "done:"
-    log "  ${BUILD_DIR}/boardcommd"
-    log "  ${BUILD_DIR}/boardcomm_pub"
-    log "  ${BUILD_DIR}/boardcomm_sub"
+    log "  ${BUILD_DIR}/nvcommd"
+    log "  ${BUILD_DIR}/nvcomm_pub"
+    log "  ${BUILD_DIR}/nvcomm_sub"
 }
 
 do_rebuild() {
@@ -247,18 +247,18 @@ do_install() {
 
 do_run() {
     do_build
-    mkdir -p "${ROOT_DIR}/log"
+    mkdir -p "${ROOT_DIR}/log" "${ROOT_DIR}/data/events"
 
     log "smoke test: daemon + subscriber + publisher"
-    "${BUILD_DIR}/boardcommd" &
+    "${BUILD_DIR}/nvcommd" &
     local daemon_pid=$!
     sleep 0.5
 
-    "${BUILD_DIR}/boardcomm_sub" sensor/temp &
+    "${BUILD_DIR}/nvcomm_sub" sensor/temp &
     local sub_pid=$!
     sleep 0.5
 
-    "${BUILD_DIR}/boardcomm_pub" sensor/temp 25.3
+    "${BUILD_DIR}/nvcomm_pub" sensor/temp 25.3
     sleep 0.5
 
     kill "${sub_pid}" 2>/dev/null || true

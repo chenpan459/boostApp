@@ -58,7 +58,7 @@ LogLevel parse_log_level(const std::string& level_name) {
 void init_logging(const std::string& log_dir, const std::string& level_name) {
     g_min_level = parse_log_level(level_name);
     std::filesystem::create_directories(log_dir);
-    const auto log_path = (std::filesystem::path(log_dir) / "boardcomm.log").string();
+    const auto log_path = (std::filesystem::path(log_dir) / "nvcomm.log").string();
     g_file = std::make_unique<std::ofstream>(log_path, std::ios::app);
 }
 

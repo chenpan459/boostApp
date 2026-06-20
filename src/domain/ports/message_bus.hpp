@@ -1,19 +1,12 @@
 #pragma once
 
+#include "domain/message.hpp"
 #include "namespace.hpp"
 
-#include <cstdint>
 #include <functional>
-#include <string>
 #include <string_view>
 
 NV_NS_DOMAIN_BEGIN
-
-struct Message {
-    std::string topic;
-    std::string payload;
-    std::uint32_t priority{0};
-};
 
 using MessageHandler = std::function<void(const Message&)>;
 
