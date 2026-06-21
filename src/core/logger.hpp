@@ -3,6 +3,7 @@
 #include "namespace.hpp"
 
 #include <cstdint>
+#include <functional>
 #include <mutex>
 #include <ostream>
 #include <string>
@@ -17,6 +18,12 @@ void init_logging(const std::string& log_dir,
 void shutdown_logging();
 
 void log_write(LogLevel level, const std::string& message);
+
+using LogSinkId = std::uint64_t;
+using LogSinkCallback = std::function<void(const std::string& line)>;
+
+LogSinkId attach_log_sink(LogSinkCallback callback);
+void detach_log_sink(LogSinkId id);
 
 LogLevel parse_log_level(const std::string& level_name);
 void set_log_level(const std::string& level_name);

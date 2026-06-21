@@ -8,6 +8,9 @@ constexpr std::uint8_t kWill = 251;
 constexpr std::uint8_t kWont = 252;
 constexpr std::uint8_t kDo = 253;
 constexpr std::uint8_t kDont = 254;
+constexpr std::uint8_t kEcho = 1;
+constexpr std::uint8_t kSga = 3;
+constexpr std::uint8_t kLinemode = 34;
 
 void push_iac(std::vector<std::uint8_t>& out, std::uint8_t cmd, std::uint8_t opt) {
     out.push_back(kIac);
@@ -15,17 +18,20 @@ void push_iac(std::vector<std::uint8_t>& out, std::uint8_t cmd, std::uint8_t opt
     out.push_back(opt);
 }
 
+void push_iac(std::string& out, std::uint8_t cmd, std::uint8_t opt) {
+    out.push_back(static_cast<char>(kIac));
+    out.push_back(static_cast<char>(cmd));
+    out.push_back(static_cast<char>(opt));
+}
+
 }  // namespace
 
 std::string telnet_negotiation() {
-    // Let telnet client echo and edit locally (standard inetutils telnet behavior).
+    // Match common telnetd (netkit): server echo, SGA, no linemode.
     std::string out;
-    out.push_back(static_cast<char>(kIac));
-    out.push_back(static_cast<char>(kWont));
-    out.push_back(static_cast<char>(1));  // ECHO
-    out.push_back(static_cast<char>(kIac));
-    out.push_back(static_cast<char>(kDo));
-    out.push_back(static_cast<char>(3));  // SGA
+    push_iac(out, kWill, kEcho);
+    push_iac(out, kWill, kSga);
+    push_iac(out, kDont, kLinemode);
     return out;
 }
 
@@ -66,6 +72,8 @@ TelnetParseResult TelnetLineReader::feed(std::uint8_t byte) {
     }
 
     if (byte == '\r') {
+        result.replies.push_back('\r');
+        result.replies.push_back('\n');
         result.line_ready = true;
         result.line = std::move(line_);
         line_.clear();
@@ -78,6 +86,8 @@ TelnetParseResult TelnetLineReader::feed(std::uint8_t byte) {
             swallow_lf_ = false;
             return result;
         }
+        result.replies.push_back('\r');
+        result.replies.push_back('\n');
         result.line_ready = true;
         result.line = std::move(line_);
         line_.clear();
@@ -92,29 +102,40 @@ TelnetParseResult TelnetLineReader::feed(std::uint8_t byte) {
         return result;
     }
 
-    if (byte == 127 || byte == 8 || byte < 32) {
+    if (byte == 127 || byte == 8) {
+        if (!line_.empty()) {
+            line_.pop_back();
+            result.replies.push_back('\b');
+            result.replies.push_back(' ');
+            result.replies.push_back('\b');
+        }
+        return result;
+    }
+
+    if (byte < 32) {
         return result;
     }
 
     line_.push_back(static_cast<char>(byte));
+    result.replies.push_back(byte);
     return result;
 }
 
 void TelnetLineReader::handle_iac(std::uint8_t cmd, std::uint8_t opt, std::vector<std::uint8_t>& replies) {
     if (cmd == kDo) {
-        if (opt == 1) {
-            push_iac(replies, kWont, opt);
-        } else if (opt == 3) {
+        if (opt == kEcho || opt == kSga) {
             push_iac(replies, kWill, opt);
+        } else if (opt == kLinemode) {
+            push_iac(replies, kWont, opt);
         } else {
             push_iac(replies, kWont, opt);
         }
         return;
     }
     if (cmd == kWill) {
-        if (opt == 1) {
-            push_iac(replies, kDo, opt);
-        } else if (opt == 3) {
+        if (opt == kEcho || opt == kLinemode) {
+            push_iac(replies, kDont, opt);
+        } else if (opt == kSga) {
             push_iac(replies, kDo, opt);
         } else {
             push_iac(replies, kDont, opt);

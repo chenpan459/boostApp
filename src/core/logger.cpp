@@ -8,6 +8,8 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <unordered_map>
+#include <vector>
 
 NV_NS_CORE_BEGIN
 namespace {
@@ -17,6 +19,8 @@ LogLevel g_min_level{LogLevel::Info};
 std::unique_ptr<std::ofstream> g_file;
 std::string g_log_dir;
 std::uint64_t g_max_file_bytes{10ULL * 1024 * 1024};
+LogSinkId g_next_sink_id{1};
+std::unordered_map<LogSinkId, LogSinkCallback> g_log_sinks;
 
 const char* level_name(LogLevel level) {
     switch (level) {
@@ -115,10 +119,23 @@ void init_logging(const std::string& log_dir,
 
 void shutdown_logging() {
     std::lock_guard lock(g_log_mutex);
+    g_log_sinks.clear();
     if (g_file && g_file->is_open()) {
         g_file->flush();
         g_file.reset();
     }
+}
+
+LogSinkId attach_log_sink(LogSinkCallback callback) {
+    std::lock_guard lock(g_log_mutex);
+    const LogSinkId id = g_next_sink_id++;
+    g_log_sinks.emplace(id, std::move(callback));
+    return id;
+}
+
+void detach_log_sink(LogSinkId id) {
+    std::lock_guard lock(g_log_mutex);
+    g_log_sinks.erase(id);
 }
 
 void log_write(LogLevel level, const std::string& message) {
@@ -130,14 +147,27 @@ void log_write(LogLevel level, const std::string& message) {
     line << now_string() << " [" << level_name(level) << "] " << message;
     const std::string text = line.str();
 
-    std::lock_guard lock(g_log_mutex);
-    std::cerr << text << '\n';
-    if (g_file && g_file->is_open()) {
-        rotate_if_needed_unlocked(text.size() + 1);
+    std::vector<LogSinkCallback> sinks;
+    {
+        std::lock_guard lock(g_log_mutex);
+        std::cerr << text << '\n';
         if (g_file && g_file->is_open()) {
-            (*g_file) << text << '\n';
-            g_file->flush();
+            rotate_if_needed_unlocked(text.size() + 1);
+            if (g_file && g_file->is_open()) {
+                (*g_file) << text << '\n';
+                g_file->flush();
+            }
         }
+        sinks.reserve(g_log_sinks.size());
+        for (const auto& entry : g_log_sinks) {
+            if (entry.second) {
+                sinks.push_back(entry.second);
+            }
+        }
+    }
+
+    for (const auto& sink : sinks) {
+        sink(text);
     }
 }
 

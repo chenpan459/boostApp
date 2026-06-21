@@ -14,11 +14,11 @@ struct TelnetParseResult {
     std::string line;
 };
 
-// Filters telnet IAC bytes and assembles one input line.
-// Does not echo: the telnet client displays typed characters locally.
+// Telnet protocol filter + server-side line editor (echo, backspace, enter).
 class TelnetLineReader {
 public:
     TelnetParseResult feed(std::uint8_t byte);
+    const std::string& current_line() const { return line_; }
 
 private:
     void handle_iac(std::uint8_t cmd, std::uint8_t opt, std::vector<std::uint8_t>& replies);
