@@ -103,7 +103,7 @@ std::vector<std::string> CliDispatcher::cmd_status() const {
         "config=" + context_.config_path,
         "http=" + context_.config->listen_address + ":" + std::to_string(context_.config->listen_port),
         "unix_socket=" + (context_.config->unix_socket.empty() ? "-" : context_.config->unix_socket),
-        "cli_socket=" + context_.config->cli_socket,
+        "cli_telnet=" + context_.config->cli_listen + ":" + std::to_string(context_.config->cli_port),
     };
 }
 

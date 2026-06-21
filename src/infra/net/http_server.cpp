@@ -269,7 +269,8 @@ public:
         acceptor_.set_option(asio::socket_base::reuse_address(true), ec);
         acceptor_.bind(endpoint, ec);
         if (ec) {
-            throw std::runtime_error("tcp bind failed: " + ec.message());
+            throw std::runtime_error("tcp bind failed on " + endpoint.address().to_string() + ":" +
+                                     std::to_string(endpoint.port()) + ": " + ec.message());
         }
         acceptor_.listen(asio::socket_base::max_listen_connections, ec);
         if (ec) {

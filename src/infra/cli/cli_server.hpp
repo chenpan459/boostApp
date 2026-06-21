@@ -6,6 +6,7 @@
 
 #include <boost/asio/io_context.hpp>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -20,7 +21,8 @@ public:
 
 private:
     class Impl;
-    std::string socket_path_;
+    std::string listen_address_;
+    std::uint16_t listen_port_{0};
     CliDispatcher dispatcher_;
     std::shared_ptr<Impl> impl_;
 };

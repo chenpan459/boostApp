@@ -158,7 +158,14 @@ AppConfig load_config(const std::string& path) {
     cfg.gateway_rate_limit_rps = get_value(values, "gateway", "rate_limit_rps", cfg.gateway_rate_limit_rps);
 
     cfg.cli_enabled = get_value(values, "debug", "cli_enabled", cfg.cli_enabled);
-    cfg.cli_socket = get_value(values, "debug", "cli_socket", cfg.cli_socket);
+    cfg.cli_listen = get_value(values, "debug", "cli_listen", cfg.cli_listen);
+    {
+        const auto port = get_value<std::uint32_t>(values, "debug", "cli_port", cfg.cli_port);
+        if (port > 65535) {
+            throw std::runtime_error("invalid debug.cli_port: " + std::to_string(port));
+        }
+        cfg.cli_port = static_cast<std::uint16_t>(port);
+    }
 
     cfg.watchdog_sec = get_value(values, "runtime", "watchdog_sec", cfg.watchdog_sec);
     cfg.cpu_affinity = get_value(values, "runtime", "cpu_affinity", cfg.cpu_affinity);

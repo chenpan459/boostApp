@@ -54,7 +54,7 @@ void Application::parse_args(int argc, char** argv) {
             help << "Usage: " << app_name_ << " [options]\n"
                  << "  -c, --config PATH   config file (default: " << config_path_ << ")\n"
                  << "  -h, --help          show help\n"
-                 << "\nDebug CLI: nvcomm-cli -s run/nvcomm.cli.sock\n";
+                 << "\nDebug CLI: telnet " << config_.cli_listen << " " << config_.cli_port << "\n";
             std::cout << help.str();
             std::exit(0);
         }
@@ -122,13 +122,22 @@ int Application::run_network() {
         schedule_watchdog_feed();
     }
 
-    gateway_service_ = std::make_unique<service::GatewayService>(config_, running_);
-    gateway_service_->start();
+    try {
+        gateway_service_ = std::make_unique<service::GatewayService>(config_, running_);
+        gateway_service_->start();
 
-    if (config_.cli_enabled && !config_.cli_socket.empty()) {
-        cli_server_ = std::make_unique<NV_NS_INFRA_CLI::CliServer>(
-            io_context_, gateway_service_->cli_context(config_path_));
-        cli_server_->start();
+        if (config_.cli_enabled && config_.cli_port > 0) {
+            cli_server_ = std::make_unique<NV_NS_INFRA_CLI::CliServer>(
+                io_context_, gateway_service_->cli_context(config_path_));
+            cli_server_->start();
+        }
+    } catch (const std::exception& ex) {
+        std::cerr << app_name_ << " failed to start: " << ex.what() << '\n'
+                  << "hint: another instance may be running (check: pgrep -a nvcommd, "
+                  << "ss -tlnp | grep -E ':8080|:2323')\n";
+        gateway_service_.reset();
+        cli_server_.reset();
+        return 1;
     }
 
     io_context_.run();

@@ -230,7 +230,6 @@ do_build() {
     compile
     log "done:"
     log "  ${BUILD_DIR}/nvcommd"
-    log "  ${BUILD_DIR}/nvcomm-cli"
 }
 
 do_rebuild() {
@@ -260,9 +259,8 @@ do_run() {
         --data "sensor/temp=25.3"
     echo
 
-    log "smoke test: nvcomm-cli debug socket"
-    "${BUILD_DIR}/nvcomm-cli" -s "${ROOT_DIR}/run/nvcomm.cli.sock" ping | grep -q '^pong$'
-    "${BUILD_DIR}/nvcomm-cli" -s "${ROOT_DIR}/run/nvcomm.cli.sock" stats | grep -q '^total_requests='
+    log "smoke test: debug cli telnet"
+    printf 'ping\nexit\n' | nc -w 2 127.0.0.1 2323 | grep -q 'pong'
 
     kill "${daemon_pid}" 2>/dev/null || true
     wait "${daemon_pid}" 2>/dev/null || true

@@ -46,6 +46,7 @@ add_library(nvcomm_core STATIC
     src/infra/net/http_server.cpp
     src/infra/cli/cli_dispatcher.cpp
     src/infra/cli/cli_server.cpp
+    src/infra/cli/telnet_util.cpp
     src/service/gateway/router.cpp
     src/service/gateway/gateway.cpp
     src/service/gateway/middleware/request_id_middleware.cpp
@@ -87,12 +88,6 @@ target_link_libraries(nvcomm_core PUBLIC
 add_executable(nvcommd src/app/nvcommd/main.cpp)
 target_link_libraries(nvcommd PRIVATE nvcomm_core)
 
-add_executable(nvcomm-cli
-    src/app/nvcomm_cli/main.cpp
-    src/app/nvcomm_cli/line_editor.cpp
-)
-target_link_libraries(nvcomm-cli PRIVATE nvcomm_core)
-
 if(NVCOMM_BUILD_TESTS)
     enable_testing()
     add_executable(nvcomm_tests
@@ -109,7 +104,7 @@ if(NVCOMM_BUILD_TESTS)
     add_test(NAME nvcomm_tests COMMAND nvcomm_tests)
 endif()
 
-install(TARGETS nvcommd nvcomm-cli
+install(TARGETS nvcommd
     RUNTIME DESTINATION bin
 )
 
